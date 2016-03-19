@@ -16,10 +16,11 @@ public class MLSystemManager {
 		if (model.equals("baseline")) return new BaselineLearner();
 		else if (model.equals("perceptron")) return new Perceptron();
 		// else if (model.equals("neuralnet")) return new NeuralNet(rand);
-		else if (model.equals("decisiontree")) return new DecisionTreeModel();
-		else if (model.equals("knn")) return new KNN();
+		//else if (model.equals("decisiontree")) return new DecisionTreeModel();
+		else if (model.equals("knn")) return new KNN(3);
 		else throw new Exception("Unrecognized model: " + model);
 	}
+
 
 	public void run(String[] args) throws Exception {
 

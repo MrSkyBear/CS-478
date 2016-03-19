@@ -19,12 +19,13 @@ public class KNN extends SupervisedLearner
         //    if feature is continuous, use euclidean distance
         //    else if feature matches, distance is 0, else 1
 
-
+        return 0.0;
     }
 
     public int classify(ArrayList<Double> outputs)
     {
         // Should I store new instances in the "training data?"
+        return 0;
     }
 
 
@@ -35,7 +36,7 @@ public class KNN extends SupervisedLearner
         // i.e.
         // [4.0, Red, 6.3]
         // [C, N, C]
-        this.stored_data = features;
+        this.stored_data = feature_values;
     }
 
     public void predict(double[] feature_values, double[] targets) throws Exception

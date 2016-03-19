@@ -22,12 +22,14 @@ public class DecisionTreeModel extends SupervisedLearner
         // If number of predicting attributes is 0, return root with label of most common target attribute
 
         int attribute = 0; // Choose feature that represents majority (Best info gain)
+
+        return null;
     }
 
 
     public int classify(ArrayList<Double> outputs)
     {
-        
+        return 0;
     }
 
     public void train(Matrix features, Matrix labels) throws Exception
