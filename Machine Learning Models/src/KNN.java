@@ -64,13 +64,6 @@ public class KNN extends SupervisedLearner
         return distances;
     }
 
-    public int classify(ArrayList<Double> outputs)
-    {
-        // Should I store new instances in the "training data?"
-        //
-        return 0;
-    }
-
     // Store data along with list of feature types for each value
     // i.e.
     // [4.0, Red, 6.3]
@@ -141,7 +134,6 @@ public class KNN extends SupervisedLearner
 
     public void predict(double[] feature_values, double[] targets) throws Exception
     {
-
         HashMap<Double, Integer> votes = get_votes(calculate_distances(feature_values));
 
         double majority_class = 0;
@@ -153,6 +145,7 @@ public class KNN extends SupervisedLearner
             if (e.getValue() > highest_votes)
             {
                 majority_class = e.getKey();
+                highest_votes = e.getValue();
             }
         }
 
