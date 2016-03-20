@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
+import java.util.Arrays;
 
 public class KNN extends SupervisedLearner
 {
@@ -11,43 +11,46 @@ public class KNN extends SupervisedLearner
     private int num_output_classes;
 
     HashMap<Integer,String> feature_types;
+    String output_type;
 
     public KNN(int k)
     {
         this.k = k;
-        feature_types = new HashMap<Integer,String>();
+        feature_types = new HashMap<>();
     }
 
     public double single_distance(double[] instance_a, double[] instance_b)
     {
-        double distance = 0.0;
+        double distance_squared = 0.0;
 
         for (int i = 0; i < instance_a.length; i++)
         {
             if (feature_types.get(i).equals("CONTINUOUS"))
             {
-
+                distance_squared += Math.pow((instance_a[i] - instance_b[i]), 2.0);
             }
             else
             {
-
+                // If either a or b is unknown, distance is 1
+                // Matrix class uses Double.MAX_VALUE for unknown/missing values
+                if (instance_a[i] == Double.MAX_VALUE || instance_b[i] == Double.MAX_VALUE)
+                {
+                    distance_squared += 1;
+                }
+                else
+                {
+                    distance_squared += instance_a[i] == instance_b[i] ? 0 : 1;
+                }
             }
         }
 
-        return 0.0;
+        return Math.sqrt(distance_squared);
     }
-
-    // Function will take in new data instance
-    // For each instance in the stored data
-    //    if feature is continuous, use euclidean distance
-    //      (Matrix.valueCount(column_number): 0 == continuous, else nominal?
-    //      Nominal values in matrix are represented with enum
-    //    else if feature matches, distance is 0, else 1
 
     // Return a mapping of distance : list of data_point row numbers
     public HashMap<Double, ArrayList<Integer>> calculate_distances(double[] data_instance)
     {
-        HashMap<Double, ArrayList<Integer>> distances = new HashMap<Double, ArrayList<Integer>>();
+        HashMap<Double, ArrayList<Integer>> distances = new HashMap<>();
 
         for (int i = 0; i < stored_data.rows(); i++)
         {
@@ -87,68 +90,123 @@ public class KNN extends SupervisedLearner
                 feature_types.put(i, "NOMINAL");
             }
         }
+
+        if (targets.valueCount(0) == 0)
+        {
+            this.output_type = "CONTINUOUS";
+        }
+        else
+        {
+            this.output_type = "NOMINAL";
+        }
     }
 
-    // Returns a mapping of output_class : number of votes
-    public HashMap<Double, Integer> get_votes(HashMap<Double, ArrayList<Integer>> distances)
+    // Returns a mapping of the neighbor's row in the data set : distance
+    public HashMap<Integer, Double> nearest_neighbors(HashMap<Double, ArrayList<Integer>> distances)
     {
-        HashMap<Double, Integer> votes = new HashMap<>();
+        HashMap<Integer, Double> neighbors = new HashMap<>();
 
-        // DOUBLE CHECK THAT OUTPUT CLASSES START AT 0
-        for (double x = 0; x < this.num_output_classes; x++)
+        Double[] distance_keys = new Double[distances.size()];
+        distances.keySet().toArray(distance_keys);
+        Arrays.sort(distance_keys);
+
+        int distance_index = 0;
+
+        while (neighbors.size() != this.k)
         {
-            votes.put(x, 0);
-        }
-
-        int tallied_instances = 0;
-        boolean found_n = false;
-
-        // Need to sort keyset in descending order
-        for (double d : distances.keySet())
-        {
-            ArrayList<Integer> instances = distances.get(d);
+            double distance = distance_keys[distance_index];
+            ArrayList<Integer> instances = distances.get(distance);
 
             for (Integer i : instances)
             {
-                double instance_class = this.targets.get(0, i);
-                votes.put(instance_class, votes.get(instance_class) + 1);
-                tallied_instances++;
+                neighbors.put(i, distance);
 
-                if (tallied_instances == this.k)
+                if (neighbors.size() == this.k)
                 {
-                    found_n = true;
                     break;
                 }
             }
 
-            if (found_n)
-            {
-                break;
-            }
+            distance_index++;
+        }
+
+        return neighbors;
+    }
+
+    // Returns a mapping of output_class : number of votes
+    // Each of the nearest neighbors will get a vote for a single output class
+    public HashMap<Double, Double> get_votes(HashMap<Integer, Double> neighbors, boolean weighted)
+    {
+        HashMap<Double, Double> votes = new HashMap<>();
+
+        for (double x = 0; x < this.num_output_classes; x++)
+        {
+            votes.put(x, 0.0);
+        }
+
+        for (Map.Entry<Integer, Double> e : neighbors.entrySet())
+        {
+            double instance_class = this.targets.get(e.getKey(), 0);
+
+            double vote = weighted ? (e.getValue() / (Math.pow(e.getValue(), 2.0))) : 1;
+
+            votes.put(instance_class, votes.get(instance_class) + vote);
         }
 
         return votes;
     }
 
+    public double regression_vote(HashMap<Integer, Double> neighbors, boolean weighted)
+    {
+        double raw_score = 0;
+        double total_weight = 0.0;
+
+        for (Map.Entry<Integer, Double> e : neighbors.entrySet())
+        {
+            double weight = weighted ? (e.getValue() / (Math.pow(e.getValue(), 2.0))) : 1;
+            total_weight += weight;
+
+            raw_score += (weight * this.targets.get(e.getKey(), 0));
+        }
+
+        if (weighted)
+        {
+            return raw_score / total_weight;
+        }
+        else
+        {
+            return (raw_score / this.k);
+        }
+    }
 
 
     public void predict(double[] feature_values, double[] targets) throws Exception
     {
-        HashMap<Double, Integer> votes = get_votes(calculate_distances(feature_values));
+        HashMap<Integer, Double> neighbors = nearest_neighbors(calculate_distances(feature_values));
 
-        double majority_class = 0;
-        double highest_votes = -1;
-
-        // Find instance with largest number of votes
-        for (Map.Entry<Double, Integer> e : votes.entrySet())
+        // If nominal output classes, do normal Classification, else use regression
+        if (this.output_type.equals("NOMINAL"))
         {
-            if (e.getValue() > highest_votes)
-            {
-                majority_class = e.getKey();
-                highest_votes = e.getValue();
-            }
-        }
+            HashMap<Double, Double> votes = get_votes(neighbors, false);
 
-        targets[0] = majority_class;
+            double majority_class = 0;
+            double highest_votes = -1;
+
+            // Find instance with largest number of votes
+            for (Map.Entry<Double, Double> e : votes.entrySet())
+            {
+                if (e.getValue() > highest_votes)
+                {
+                    majority_class = e.getKey();
+                    highest_votes = e.getValue();
+                }
+            }
+
+            targets[0] = majority_class;
+        }
+        else
+        {
+            targets[0] = regression_vote(neighbors, false);
+        }
     }
 }
