@@ -10,8 +10,8 @@ public class KNN extends SupervisedLearner
     private int k;
     private int num_output_classes;
 
-    HashMap<Integer,String> feature_types;
-    String output_type;
+    private HashMap<Integer,String> feature_types;
+    private String output_type;
 
     public KNN(int k)
     {
@@ -108,7 +108,7 @@ public class KNN extends SupervisedLearner
 
         Double[] distance_keys = new Double[distances.size()];
         distances.keySet().toArray(distance_keys);
-        Arrays.sort(distance_keys);
+        //Arrays.sort(distance_keys);
 
         int distance_index = 0;
 
@@ -148,9 +148,24 @@ public class KNN extends SupervisedLearner
         {
             double instance_class = this.targets.get(e.getKey(), 0);
 
-            double vote = weighted ? (e.getValue() / (Math.pow(e.getValue(), 2.0))) : 1;
+            double vote = 1;
 
-            votes.put(instance_class, votes.get(instance_class) + vote);
+            // If distance is 0, an exact match was found, so it's class should always be chosen
+            if (weighted && e.getValue() != 0)
+            {
+                vote = (e.getValue() / (Math.pow(e.getValue(), 2.0)));
+            }
+            else if (weighted && e.getValue() == 0)
+            {
+                vote = Double.MAX_VALUE;
+                votes.put(instance_class, vote);
+            }
+
+            if (votes.get(instance_class) != Double.MAX_VALUE && vote != Double.MAX_VALUE)
+            if (vote != Double.MAX_VALUE)
+            {
+                votes.put(instance_class, votes.get(instance_class) + vote);
+            }
         }
 
         return votes;
@@ -163,7 +178,13 @@ public class KNN extends SupervisedLearner
 
         for (Map.Entry<Integer, Double> e : neighbors.entrySet())
         {
-            double weight = weighted ? (e.getValue() / (Math.pow(e.getValue(), 2.0))) : 1;
+            double weight = 1;
+
+            if (weighted && e.getValue() != 0)
+            {
+                weight = (e.getValue() / (Math.pow(e.getValue(), 2.0)));
+            }
+
             total_weight += weight;
 
             raw_score += (weight * this.targets.get(e.getKey(), 0));
@@ -187,7 +208,7 @@ public class KNN extends SupervisedLearner
         // If nominal output classes, do normal Classification, else use regression
         if (this.output_type.equals("NOMINAL"))
         {
-            HashMap<Double, Double> votes = get_votes(neighbors, false);
+            HashMap<Double, Double> votes = get_votes(neighbors, true);
 
             double majority_class = 0;
             double highest_votes = -1;
@@ -206,7 +227,7 @@ public class KNN extends SupervisedLearner
         }
         else
         {
-            targets[0] = regression_vote(neighbors, false);
+            targets[0] = regression_vote(neighbors, true);
         }
     }
 }
