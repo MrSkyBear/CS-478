@@ -17,7 +17,7 @@ public class MLSystemManager {
 		else if (model.equals("perceptron")) return new Perceptron();
 		// else if (model.equals("neuralnet")) return new NeuralNet(rand);
 		//else if (model.equals("decisiontree")) return new DecisionTreeModel();
-		else if (model.equals("knn")) return new KNN(3);
+		else if (model.equals("knn")) return new KNN(9);
 		else throw new Exception("Unrecognized model: " + model);
 	}
 

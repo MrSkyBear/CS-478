@@ -19,6 +19,22 @@ public class KNN extends SupervisedLearner
         feature_types = new HashMap<>();
     }
 
+
+    public double manhattan_distance(double[] instance_a, double[] instance_b)
+    {
+        double distance = 0.0;
+
+        for (int i = 0; i < instance_a.length; i++)
+        {
+            if (feature_types.get(i).equals("CONTINUOUS"))
+            {
+                distance += Math.abs((instance_a[i] - instance_b[i]));
+            }
+        }
+
+        return distance;
+    }
+
     public double single_distance(double[] instance_a, double[] instance_b)
     {
         double distance_squared = 0.0;
@@ -55,6 +71,9 @@ public class KNN extends SupervisedLearner
         for (int i = 0; i < stored_data.rows(); i++)
         {
             double distance = single_distance(stored_data.row(i), data_instance);
+
+            // Used to test manhattan distance function for data sets with all continuous features
+            //double distance = manhattan_distance(stored_data.row(i), data_instance);
 
             if (!distances.containsKey(distance))
             {
@@ -108,7 +127,7 @@ public class KNN extends SupervisedLearner
 
         Double[] distance_keys = new Double[distances.size()];
         distances.keySet().toArray(distance_keys);
-        //Arrays.sort(distance_keys);
+        Arrays.sort(distance_keys);
 
         int distance_index = 0;
 
@@ -153,7 +172,7 @@ public class KNN extends SupervisedLearner
             // If distance is 0, an exact match was found, so it's class should always be chosen
             if (weighted && e.getValue() != 0)
             {
-                vote = (e.getValue() / (Math.pow(e.getValue(), 2.0)));
+                vote = (1.0 / (Math.pow(e.getValue(), 2.0)));
             }
             else if (weighted && e.getValue() == 0)
             {
@@ -161,8 +180,8 @@ public class KNN extends SupervisedLearner
                 votes.put(instance_class, vote);
             }
 
+            //if (vote != Double.MAX_VALUE)
             if (votes.get(instance_class) != Double.MAX_VALUE && vote != Double.MAX_VALUE)
-            if (vote != Double.MAX_VALUE)
             {
                 votes.put(instance_class, votes.get(instance_class) + vote);
             }
@@ -182,7 +201,7 @@ public class KNN extends SupervisedLearner
 
             if (weighted && e.getValue() != 0)
             {
-                weight = (e.getValue() / (Math.pow(e.getValue(), 2.0)));
+                weight = (1 / (Math.pow(e.getValue(), 2.0)));
             }
 
             total_weight += weight;
@@ -203,6 +222,7 @@ public class KNN extends SupervisedLearner
 
     public void predict(double[] feature_values, double[] targets) throws Exception
     {
+
         HashMap<Integer, Double> neighbors = nearest_neighbors(calculate_distances(feature_values));
 
         // If nominal output classes, do normal Classification, else use regression
